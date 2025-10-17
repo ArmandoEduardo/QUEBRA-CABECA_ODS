@@ -6,7 +6,15 @@ class DifficultySelectionPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final List<int> pieceOptions = [6, 10, 14, 18, 22];
+    // 🔹 Grids retangulares com proporção real
+    final List<Map<String, dynamic>> difficultyOptions = [
+      {'pieces': 6, 'cols': 3, 'rows': 2, 'label': 'FÁCIL'},
+      {'pieces': 12, 'cols': 4, 'rows': 3, 'label': 'INICIANTE'},
+      {'pieces': 15, 'cols': 5, 'rows': 3, 'label': 'INTERMEDIÁRIO'},
+      {'pieces': 24, 'cols': 6, 'rows': 4, 'label': 'DESAFIADOR'},
+      {'pieces': 30, 'cols': 6, 'rows': 5, 'label': 'EXPERT'},
+    ];
+    
     final screenWidth = MediaQuery.of(context).size.width;
     final isWeb = identical(0, 0.0);
     
@@ -95,9 +103,14 @@ class DifficultySelectionPage extends StatelessWidget {
                     
                     // Botões de dificuldade
                     Column(
-                      children: pieceOptions.asMap().entries.map((entry) {
+                      children: difficultyOptions.asMap().entries.map((entry) {
                         final index = entry.key;
-                        final pieces = entry.value;
+                        final option = entry.value;
+                        final pieces = option['pieces'];
+                        final cols = option['cols'];
+                        final rows = option['rows'];
+                        final label = option['label'];
+                        
                         final colors = [
                           const Color(0xFF4CAF50), // Verde
                           const Color(0xFF8BC34A), // Verde claro
@@ -131,12 +144,25 @@ class DifficultySelectionPage extends StatelessWidget {
                                   size: 24,
                                 ),
                                 const SizedBox(width: 12),
-                                Text(
-                                  '$pieces Peças',
-                                  style: const TextStyle(
-                                    fontSize: 18,
-                                    fontWeight: FontWeight.bold,
-                                  ),
+                                Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      '$pieces Peças',
+                                      style: const TextStyle(
+                                        fontSize: 18,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                    Text(
+                                      'Grid ${cols}x$rows', // Agora mostra colunas x linhas
+                                      style: TextStyle(
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.normal,
+                                        color: Colors.white.withOpacity(0.9),
+                                      ),
+                                    ),
+                                  ],
                                 ),
                                 const SizedBox(width: 8),
                                 Container(
@@ -149,7 +175,7 @@ class DifficultySelectionPage extends StatelessWidget {
                                     borderRadius: BorderRadius.circular(12),
                                   ),
                                   child: Text(
-                                    _getDifficultyText(pieces),
+                                    label,
                                     style: const TextStyle(
                                       fontSize: 12,
                                       fontWeight: FontWeight.bold,
@@ -210,37 +236,11 @@ class DifficultySelectionPage extends StatelessWidget {
   }
 
   IconData _getDifficultyIcon(int pieces) {
-    switch (pieces) {
-      case 6:
-        return Icons.child_care;
-      case 10:
-        return Icons.school;
-      case 14:
-        return Icons.work;
-      case 18:
-        return Icons.engineering;
-      case 22:
-        return Icons.emoji_events;
-      default:
-        return Icons.extension;
-    }
-  }
-
-  String _getDifficultyText(int pieces) {
-    switch (pieces) {
-      case 6:
-        return 'FÁCIL';
-      case 10:
-        return 'INICIANTE';
-      case 14:
-        return 'INTERMEDIÁRIO';
-      case 18:
-        return 'DESAFIADOR';
-      case 22:
-        return 'EXPERT';
-      default:
-        return 'PADRÃO';
-    }
+    if (pieces <= 6) return Icons.child_care;
+    if (pieces <= 12) return Icons.school;
+    if (pieces <= 15) return Icons.work;
+    if (pieces <= 24) return Icons.engineering;
+    return Icons.emoji_events;
   }
 
   void _startGame(BuildContext context, int pieces) {
