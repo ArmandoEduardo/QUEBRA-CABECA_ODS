@@ -353,7 +353,7 @@ class IntroductionPage extends StatelessWidget {
                         horizontal: isWeb ? 60.0 : 20.0,
                       ),
                       child: Text(
-                        'Junte as peças e descubra os Objetivos de Desenvolvimento Sustentável',
+                        'Junte as peças dos Objetivos de Desenvolvimento Sustentável',
                         style: TextStyle(
                           fontSize: isWeb ? 18 : 16,
                           color: Colors.grey[600],

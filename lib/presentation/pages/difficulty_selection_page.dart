@@ -154,14 +154,6 @@ class DifficultySelectionPage extends StatelessWidget {
                                         fontWeight: FontWeight.bold,
                                       ),
                                     ),
-                                    Text(
-                                      'Grid ${cols}x$rows', // Agora mostra colunas x linhas
-                                      style: TextStyle(
-                                        fontSize: 12,
-                                        fontWeight: FontWeight.normal,
-                                        color: Colors.white.withOpacity(0.9),
-                                      ),
-                                    ),
                                   ],
                                 ),
                                 const SizedBox(width: 8),

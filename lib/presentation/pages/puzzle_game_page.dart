@@ -16,38 +16,94 @@ class PuzzleGamePage extends StatefulWidget {
 }
 
 class _PuzzleGamePageState extends State<PuzzleGamePage> {
-  int currentODS = 1;
+  int currentODSIndex = 0; 
   List<PuzzlePiece?> boardPieces = [];
   List<PuzzlePiece> availablePieces = [];
   bool isCompleted = false;
+  bool _isLoading = true;
+  int _lastNumberOfPieces = 0;
 
-  final List<String> odsImages = [
-    'assets/ods/ods1.png',
-    'assets/ods/ods2.png',
-    'assets/ods/ods3.png',
-    'assets/ods/ods17.png',
-  ];
+  final Map<int, String> odsMap = {
+    1: 'assets/ods/ods1.png',
+    2: 'assets/ods/ods2.png',
+    3: 'assets/ods/ods3.png', 
+    4: 'assets/ods/ods4.png',
+    6: 'assets/ods/ods6.png', 
+    7: 'assets/ods/ods7.png', 
+    8: 'assets/ods/ods8.png',
+  };
+
+  List<int> get availableODSNumbers => odsMap.keys.toList()..sort();
+
+  int get currentODSNumber => availableODSNumbers[currentODSIndex];
+
+  String get currentODSImage => odsMap[currentODSNumber]!;
 
   @override
   void initState() {
     super.initState();
-    _loadProgress();
-    _initializePuzzle();
+    _initializeGame();
   }
 
-  void _loadProgress() async {
-    final prefs = await SharedPreferences.getInstance();
+  void _initializeGame() async {
     setState(() {
-      currentODS = prefs.getInt('currentODS') ?? 1;
+      _isLoading = true;
     });
+    
+    await _loadProgressAndLastDifficulty();
+    
+    final bool isNewDifficulty = _lastNumberOfPieces != widget.numberOfPieces;
+    
+    if (isNewDifficulty) {
+      await _resetToFirstODS();
+      await _saveLastDifficulty(widget.numberOfPieces);
+    }
+    
+    _initializePuzzle();
+    
+    setState(() {
+      _isLoading = false;
+    });
+  }
+
+  Future<void> _loadProgressAndLastDifficulty() async {
+    final prefs = await SharedPreferences.getInstance();
+    if (mounted) {
+      setState(() {
+        currentODSIndex = prefs.getInt('currentODSIndex') ?? 0; 
+        _lastNumberOfPieces = prefs.getInt('lastNumberOfPieces') ?? 0;
+      });
+    }
+  }
+
+  Future<void> _saveLastDifficulty(int numberOfPieces) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setInt('lastNumberOfPieces', numberOfPieces);
+    if (mounted) {
+      setState(() {
+        _lastNumberOfPieces = numberOfPieces;
+      });
+    }
+  }
+
+  Future<void> _resetToFirstODS() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setInt('currentODSIndex', 0); 
+    if (mounted) {
+      setState(() {
+        currentODSIndex = 0;
+      });
+    }
   }
 
   void _saveProgress() async {
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setInt('currentODS', currentODS);
+    await prefs.setInt('currentODSIndex', currentODSIndex); 
   }
 
   void _initializePuzzle() {
+    if (!mounted) return;
+    
     int gridColumns = _calculateGridColumns();
     int gridRows = _calculateGridRows();
     
@@ -59,7 +115,7 @@ class _PuzzleGamePageState extends State<PuzzleGamePage> {
         currentPosition: i,
         row: i ~/ gridColumns,
         col: i % gridColumns,
-        imagePath: odsImages[currentODS - 1],
+        imagePath: currentODSImage, 
       ));
     }
 
@@ -68,6 +124,7 @@ class _PuzzleGamePageState extends State<PuzzleGamePage> {
     setState(() {
       availablePieces = List.from(generated);
       boardPieces = List.filled(widget.numberOfPieces, null);
+      isCompleted = false;
     });
   }
 
@@ -98,7 +155,6 @@ class _PuzzleGamePageState extends State<PuzzleGamePage> {
     final screenWidth = MediaQuery.of(context).size.width;
     final screenHeight = MediaQuery.of(context).size.height;
     
-    // Para mobile, usa quase toda a largura
     if (screenWidth < 600) {
       return screenWidth * 0.95;
     }
@@ -145,23 +201,147 @@ class _PuzzleGamePageState extends State<PuzzleGamePage> {
     }
   }
 
+  bool get _isLastODS {
+    return currentODSIndex >= availableODSNumbers.length - 1; 
+  }
+
+  
+  int get _nextODSNumber {
+    if (_isLastODS) return currentODSNumber;
+    return availableODSNumbers[currentODSIndex + 1];
+  }
+
+  void _goToNextODS() {
+    if (_isLastODS) {
+      _showGameCompletedDialog();
+    } else {
+      setState(() {
+        currentODSIndex++; 
+        isCompleted = false;
+      });
+      _saveProgress();
+      _initializePuzzle();
+    }
+  }
+
   void _showCompletionDialog() {
     showDialog(
       context: context,
+      barrierDismissible: false,
+      builder: (_) => Dialog(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(
+                Icons.check_circle,
+                color: Colors.green,
+                size: 60,
+              ),
+              const SizedBox(height: 16),
+              
+              const Text(
+                'Parabéns!',
+                style: TextStyle(
+                  fontSize: 24,
+                  fontWeight: FontWeight.bold,
+                  color: Color(0xFF2E7D32),
+                ),
+              ),
+              const SizedBox(height: 8),
+              
+              Container(
+                width: 380,
+                height: 300,
+                decoration: BoxDecoration(
+                  border: Border.all(color: Colors.grey[300]!),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Image.asset(
+                  currentODSImage, 
+                  fit: BoxFit.cover,
+                ),
+              ),
+              const SizedBox(height: 8),
+              
+              Text(
+                'ODS $currentODSNumber Concluído!', 
+                style: const TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              const SizedBox(height: 16),
+              
+              Row(
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  if (_isLastODS)
+                    TextButton(
+                      onPressed: () {
+                        Navigator.of(context).pop();
+                        _showGameCompletedDialog();
+                      },
+                      child: const Text(
+                        'Finalizar Jogo',
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    )
+                  else
+                    TextButton(
+                      onPressed: () {
+                        Navigator.of(context).pop();
+                        _goToNextODS();
+                      },
+                      child: Text(
+                        'Próximo: ODS $_nextODSNumber', 
+                        style: const TextStyle(
+                          fontWeight: FontWeight.bold,
+                          color: Color(0xFF2E7D32),
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _showGameCompletedDialog() {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
       builder: (_) => AlertDialog(
         title: const Text('Parabéns!'),
-        content: Text('Você completou o ODS $currentODS!'),
+        content: const Text('Você completou todos os ODS! Jogo concluído!'),
         actions: [
           TextButton(
             onPressed: () {
-              Navigator.of(context).pop();
-              Navigator.pop(context);
+              _resetProgressAndReturnToMenu();
             },
             child: const Text('Voltar ao Menu'),
           )
         ],
       ),
     );
+  }
+
+  void _resetProgressAndReturnToMenu() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setInt('currentODSIndex', 0); 
+    await prefs.setInt('lastNumberOfPieces', 0);
+    if (mounted) {
+      Navigator.of(context).popUntil((route) => route.isFirst);
+    }
   }
 
   void _onPieceDraggedFromBoard(PuzzlePiece piece) {
@@ -178,6 +358,22 @@ class _PuzzleGamePageState extends State<PuzzleGamePage> {
 
   @override
   Widget build(BuildContext context) {
+    if (_isLoading) {
+      return Scaffold(
+        backgroundColor: Colors.white,
+        appBar: AppBar(
+          title: Text('ODS ? - ${widget.numberOfPieces} Peças'),
+          backgroundColor: const Color(0xFF2E7D32),
+          foregroundColor: Colors.white,
+        ),
+        body: const Center(
+          child: CircularProgressIndicator(
+            valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF2E7D32)),
+          ),
+        ),
+      );
+    }
+
     int gridColumns = _calculateGridColumns();
     int gridRows = _calculateGridRows();
     double puzzleWidth = _calculatePuzzleWidth(context);
@@ -188,9 +384,16 @@ class _PuzzleGamePageState extends State<PuzzleGamePage> {
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
-        title: Text('ODS $currentODS - ${widget.numberOfPieces} Peças ($gridColumns x $gridRows)'),
+        title: Text('ODS $currentODSNumber - ${widget.numberOfPieces} Peças'), // 🔹 MUDANÇA
         backgroundColor: const Color(0xFF2E7D32),
         foregroundColor: Colors.white,
+        actions: [
+          if (_isLastODS)
+            const Padding(
+              padding: EdgeInsets.only(right: 16.0),
+              child: Icon(Icons.flag, color: Colors.yellow),
+            )
+        ],
       ),
       body: LayoutBuilder(
         builder: (context, constraints) {
@@ -230,7 +433,6 @@ class _PuzzleGamePageState extends State<PuzzleGamePage> {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // 🔹 Lado esquerdo: imagem de referência
         Expanded(
           flex: 2,
           child: Container(
@@ -238,9 +440,9 @@ class _PuzzleGamePageState extends State<PuzzleGamePage> {
             alignment: Alignment.topCenter,
             child: Column(
               children: [
-                const Text(
-                  'Referência',
-                  style: TextStyle(
+                Text(
+                  'ODS $currentODSNumber - Referência', // 🔹 MUDANÇA
+                  style: const TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.bold,
                     color: Color(0xFF2E7D32),
@@ -255,8 +457,17 @@ class _PuzzleGamePageState extends State<PuzzleGamePage> {
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Image.asset(
-                    odsImages[currentODS - 1],
+                    currentODSImage, 
                     fit: BoxFit.contain,
+                  ),
+                ),
+                const SizedBox(height: 10),
+                Text(
+                  '${_isLastODS ? 'Último' : 'Próximo'}: ${_isLastODS ? 'Final' : 'ODS $_nextODSNumber'}', 
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: _isLastODS ? Colors.orange : Colors.grey,
+                    fontWeight: _isLastODS ? FontWeight.bold : FontWeight.normal,
                   ),
                 ),
               ],
@@ -264,16 +475,15 @@ class _PuzzleGamePageState extends State<PuzzleGamePage> {
           ),
         ),
 
-        // 🔹 Meio: área de montagem
         Expanded(
           flex: 4,
           child: Container(
             padding: const EdgeInsets.all(16),
             child: Column(
               children: [
-                const Text(
-                  'Monte o Quebra-Cabeça',
-                  style: TextStyle(
+                Text(
+                  'ODS $currentODSNumber - Monte o Quebra-Cabeça', 
+                  style: const TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.bold,
                     color: Color(0xFF2E7D32),
@@ -306,7 +516,6 @@ class _PuzzleGamePageState extends State<PuzzleGamePage> {
           ),
         ),
 
-        // 🔹 Lado direito: peças embaralhadas
         Expanded(
           flex: 2,
           child: _buildPiecesPanel(context, pieceWidth, pieceHeight, gridColumns, gridRows),
@@ -324,17 +533,16 @@ class _PuzzleGamePageState extends State<PuzzleGamePage> {
     int gridColumns,
     int gridRows
   ) {
-    return SingleChildScrollView( // 🔹 BARRA DE ROLAGEM ADICIONADA
+    return SingleChildScrollView(
       child: Column(
         children: [
-          // Imagem de referência (bem menor em mobile)
           Container(
             padding: const EdgeInsets.all(8),
             child: Column(
               children: [
-                const Text(
-                  'Referência',
-                  style: TextStyle(
+                Text(
+                  'ODS $currentODSNumber - Referência', 
+                  style: const TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.bold,
                     color: Color(0xFF2E7D32),
@@ -349,22 +557,30 @@ class _PuzzleGamePageState extends State<PuzzleGamePage> {
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Image.asset(
-                    odsImages[currentODS - 1],
+                    currentODSImage, 
                     fit: BoxFit.contain,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  '${_isLastODS ? 'Último ODS' : 'Próximo: ODS $_nextODSNumber'}', 
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: _isLastODS ? Colors.orange : Colors.grey,
+                    fontWeight: _isLastODS ? FontWeight.bold : FontWeight.normal,
                   ),
                 ),
               ],
             ),
           ),
           
-          // Área de montagem
           Container(
             padding: const EdgeInsets.all(8),
             child: Column(
               children: [
-                const Text(
-                  'Monte o Quebra-Cabeça',
-                  style: TextStyle(
+                Text(
+                  'ODS $currentODSNumber - Monte o Quebra-Cabeça', 
+                  style: const TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.bold,
                     color: Color(0xFF2E7D32),
@@ -396,9 +612,8 @@ class _PuzzleGamePageState extends State<PuzzleGamePage> {
             ),
           ),
           
-          // Peças embaralhadas
           Container(
-            height: 200, // 🔹 ALTURA FIXA PARA O PAINEL DE PEÇAS
+            height: 200,
             child: _buildPiecesPanelMobile(context, pieceWidth, pieceHeight, gridColumns, gridRows),
           ),
         ],
@@ -483,86 +698,84 @@ class _PuzzleGamePageState extends State<PuzzleGamePage> {
     int gridColumns,
     int gridRows
   ) {
-    return SingleChildScrollView( // 🔹 BARRA DE ROLAGEM ADICIONADA
-      child: Container(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          children: [
-            const Text(
-              'Peças Embaralhadas',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-                color: Color(0xFF2E7D32),
-              ),
+    return Container(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        children: [
+          Text(
+            'ODS $currentODSNumber - Peças Embaralhadas', 
+            style: const TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+              color: Color(0xFF2E7D32),
             ),
-            const SizedBox(height: 10),
-            Container(
-              constraints: BoxConstraints(
-                maxHeight: MediaQuery.of(context).size.height * 0.6, // 🔹 ALTURA MÁXIMA
+          ),
+          const SizedBox(height: 10),
+          Container(
+            constraints: BoxConstraints(
+              maxHeight: MediaQuery.of(context).size.height * 0.6,
+            ),
+            child: GridView.builder(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: 3,
+                crossAxisSpacing: 4,
+                mainAxisSpacing: 4,
+                childAspectRatio: pieceWidth / pieceHeight,
               ),
-              child: GridView.builder(
-                shrinkWrap: true,
-                physics: const AlwaysScrollableScrollPhysics(), // 🔹 PERMITE ROLAGEM
-                gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                  crossAxisCount: 3,
-                  crossAxisSpacing: 4,
-                  mainAxisSpacing: 4,
-                  childAspectRatio: pieceWidth / pieceHeight,
-                ),
-                itemCount: availablePieces.length,
-                itemBuilder: (context, index) {
-                  final piece = availablePieces[index];
-                  return Draggable<PuzzlePiece>(
-                    data: piece,
-                    feedback: Material(
-                      color: Colors.transparent,
-                      child: SizedBox(
-                        width: pieceWidth,
-                        height: pieceHeight,
-                        child: PuzzlePieceWidget(
-                          piece: piece,
-                          gridColumns: gridColumns,
-                          gridRows: gridRows,
-                        ),
-                      ),
-                    ),
-                    childWhenDragging: Container(
-                      color: Colors.grey[200],
-                      child: Center(
-                        child: Icon(
-                          Icons.hourglass_empty,
-                          color: Colors.grey,
-                          size: pieceWidth * 0.3,
-                        ),
-                      ),
-                    ),
-                    child: Container(
-                      decoration: BoxDecoration(
-                        border: Border.all(color: const Color(0xFF2E7D32), width: 2),
-                        borderRadius: BorderRadius.circular(8),
-                        color: Colors.green[50],
-                      ),
+              itemCount: availablePieces.length,
+              itemBuilder: (context, index) {
+                final piece = availablePieces[index];
+                return Draggable<PuzzlePiece>(
+                  data: piece,
+                  feedback: Material(
+                    color: Colors.transparent,
+                    child: SizedBox(
+                      width: pieceWidth,
+                      height: pieceHeight,
                       child: PuzzlePieceWidget(
                         piece: piece,
                         gridColumns: gridColumns,
                         gridRows: gridRows,
                       ),
                     ),
-                  );
-                },
-              ),
+                  ),
+                  childWhenDragging: Container(
+                    color: Colors.grey[200],
+                    child: Center(
+                      child: Icon(
+                        Icons.hourglass_empty,
+                        color: Colors.grey,
+                        size: pieceWidth * 0.3,
+                      ),
+                    ),
+                  ),
+                  child: Container(
+                    decoration: BoxDecoration(
+                      border: Border.all(color: const Color(0xFF2E7D32), width: 2),
+                      borderRadius: BorderRadius.circular(8),
+                      color: Colors.green[50],
+                    ),
+                    child: PuzzlePieceWidget(
+                      piece: piece,
+                      gridColumns: gridColumns,
+                      gridRows: gridRows,
+                    ),
+                  ),
+                );
+              },
             ),
-            const SizedBox(height: 10),
-            Text(
-              '${availablePieces.length} peças disponíveis',
-              style: const TextStyle(
-                fontSize: 14,
-                color: Colors.grey,
-              ),
+          ),
+          const SizedBox(height: 10),
+          Text(
+            '${availablePieces.length} peças disponíveis',
+            style: const TextStyle(
+              fontSize: 14,
+              color: Colors.grey,
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
@@ -574,86 +787,84 @@ class _PuzzleGamePageState extends State<PuzzleGamePage> {
     int gridColumns,
     int gridRows
   ) {
-    return SingleChildScrollView( // 🔹 BARRA DE ROLAGEM ADICIONADA
-      child: Container(
-        padding: const EdgeInsets.all(8),
-        child: Column(
-          children: [
-            const Text(
-              'Peças Disponíveis',
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
-                color: Color(0xFF2E7D32),
-              ),
+    return Container(
+      padding: const EdgeInsets.all(8),
+      child: Column(
+        children: [
+          Text(
+            'ODS $currentODSNumber - Peças Disponíveis', 
+            style: const TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
+              color: Color(0xFF2E7D32),
             ),
-            const SizedBox(height: 8),
-            Container(
-              constraints: BoxConstraints(
-                maxHeight: 150, // 🔹 ALTURA MÁXIMA PARA MOBILE
+          ),
+          const SizedBox(height: 8),
+          Container(
+            constraints: BoxConstraints(
+              maxHeight: 150,
+            ),
+            child: GridView.builder(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: 4,
+                crossAxisSpacing: 2,
+                mainAxisSpacing: 2,
+                childAspectRatio: pieceWidth / pieceHeight,
               ),
-              child: GridView.builder(
-                shrinkWrap: true,
-                physics: const AlwaysScrollableScrollPhysics(), // 🔹 PERMITE ROLAGEM
-                gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                  crossAxisCount: 4,
-                  crossAxisSpacing: 2,
-                  mainAxisSpacing: 2,
-                  childAspectRatio: pieceWidth / pieceHeight,
-                ),
-                itemCount: availablePieces.length,
-                itemBuilder: (context, index) {
-                  final piece = availablePieces[index];
-                  return Draggable<PuzzlePiece>(
-                    data: piece,
-                    feedback: Material(
-                      color: Colors.transparent,
-                      child: SizedBox(
-                        width: pieceWidth,
-                        height: pieceHeight,
-                        child: PuzzlePieceWidget(
-                          piece: piece,
-                          gridColumns: gridColumns,
-                          gridRows: gridRows,
-                        ),
-                      ),
-                    ),
-                    childWhenDragging: Container(
-                      color: Colors.grey[200],
-                      child: Center(
-                        child: Icon(
-                          Icons.hourglass_empty,
-                          color: Colors.grey,
-                          size: pieceWidth * 0.3,
-                        ),
-                      ),
-                    ),
-                    child: Container(
-                      decoration: BoxDecoration(
-                        border: Border.all(color: const Color(0xFF2E7D32), width: 1),
-                        borderRadius: BorderRadius.circular(4),
-                        color: Colors.green[50],
-                      ),
+              itemCount: availablePieces.length,
+              itemBuilder: (context, index) {
+                final piece = availablePieces[index];
+                return Draggable<PuzzlePiece>(
+                  data: piece,
+                  feedback: Material(
+                    color: Colors.transparent,
+                    child: SizedBox(
+                      width: pieceWidth,
+                      height: pieceHeight,
                       child: PuzzlePieceWidget(
                         piece: piece,
                         gridColumns: gridColumns,
                         gridRows: gridRows,
                       ),
                     ),
-                  );
-                },
-              ),
+                  ),
+                  childWhenDragging: Container(
+                    color: Colors.grey[200],
+                    child: Center(
+                      child: Icon(
+                        Icons.hourglass_empty,
+                        color: Colors.grey,
+                        size: pieceWidth * 0.3,
+                      ),
+                    ),
+                  ),
+                  child: Container(
+                    decoration: BoxDecoration(
+                      border: Border.all(color: const Color(0xFF2E7D32), width: 1),
+                      borderRadius: BorderRadius.circular(4),
+                      color: Colors.green[50],
+                    ),
+                    child: PuzzlePieceWidget(
+                      piece: piece,
+                      gridColumns: gridColumns,
+                      gridRows: gridRows,
+                    ),
+                  ),
+                );
+              },
             ),
-            const SizedBox(height: 8),
-            Text(
-              '${availablePieces.length} peças disponíveis',
-              style: const TextStyle(
-                fontSize: 12,
-                color: Colors.grey,
-              ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            '${availablePieces.length} peças disponíveis',
+            style: const TextStyle(
+              fontSize: 12,
+              color: Colors.grey,
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
