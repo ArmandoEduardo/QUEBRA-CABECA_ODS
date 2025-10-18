@@ -33,11 +33,30 @@ class _PuzzleGamePageState extends State<PuzzleGamePage> {
     8: 'assets/ods/ods8.png',
   };
 
+  final Map<int, String> nomeOds = {
+    1: 'erradicação da pobreza',
+    2: 'Fome Zero e Agricultura Sustentável',
+    3: 'Saúde e Bem-Estar',
+    4: 'Educação de Qualidade',
+    6: 'Água Potável e Saneamento',
+    7: 'Energia Limpa e Acessível',
+    8: 'Trabalho Decente e Crescimento Econômico',
+  };
+
   List<int> get availableODSNumbers => odsMap.keys.toList()..sort();
 
   int get currentODSNumber => availableODSNumbers[currentODSIndex];
 
   String get currentODSImage => odsMap[currentODSNumber]!;
+
+  String get currentODSName => nomeOds[currentODSNumber] ?? 'ODS $currentODSNumber';
+
+  
+  String get nextODSName {
+    if (_isLastODS) return 'Final';
+    int nextODSNumber = availableODSNumbers[currentODSIndex + 1];
+    return nomeOds[nextODSNumber] ?? 'ODS $nextODSNumber';
+  }
 
   @override
   void initState() {
@@ -105,7 +124,6 @@ class _PuzzleGamePageState extends State<PuzzleGamePage> {
     if (!mounted) return;
     
     int gridColumns = _calculateGridColumns();
-    int gridRows = _calculateGridRows();
     
     List<PuzzlePiece> generated = [];
     for (int i = 0; i < widget.numberOfPieces; i++) {
@@ -142,7 +160,7 @@ class _PuzzleGamePageState extends State<PuzzleGamePage> {
     } else if (widget.numberOfPieces <= 30) {
       return 6;
     } else {
-      return 6;
+      return 7;
     }
   }
 
@@ -253,6 +271,17 @@ class _PuzzleGamePageState extends State<PuzzleGamePage> {
                 ),
               ),
               const SizedBox(height: 8),
+              
+              Text(
+                'ODS $currentODSNumber: $currentODSName', 
+                style: const TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                  color: Color(0xFF2E7D32),
+                ),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 4),
               
               Container(
                 width: 380,
@@ -441,7 +470,7 @@ class _PuzzleGamePageState extends State<PuzzleGamePage> {
             child: Column(
               children: [
                 Text(
-                  'ODS $currentODSNumber - Referência', // 🔹 MUDANÇA
+                  'ODS $currentODSNumber - Referência', 
                   style: const TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.bold,
@@ -450,10 +479,7 @@ class _PuzzleGamePageState extends State<PuzzleGamePage> {
                 ),
                 const SizedBox(height: 10),
                 Container(
-                  width: puzzleWidth * 0.9,
-                  height: puzzleHeight * 0.9,
                   decoration: BoxDecoration(
-                    border: Border.all(color: Colors.grey),
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Image.asset(
@@ -494,10 +520,16 @@ class _PuzzleGamePageState extends State<PuzzleGamePage> {
                   width: puzzleWidth,
                   height: puzzleHeight,
                   decoration: BoxDecoration(
-                    border: Border.all(color: Colors.grey[300]!),
+                    // border: Border.all(color: Colors.grey[300]!),
                     borderRadius: BorderRadius.circular(8),
                   ),
+                   child: ScrollConfiguration(
+                    behavior: ScrollConfiguration.of(context).copyWith(
+                    scrollbars: false, 
+                    overscroll: false,
+            ),
                   child: GridView.builder(
+                    shrinkWrap: true,
                     physics: const NeverScrollableScrollPhysics(),
                     gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
                       crossAxisCount: gridColumns,
@@ -511,6 +543,8 @@ class _PuzzleGamePageState extends State<PuzzleGamePage> {
                     },
                   ),
                 ),
+                ),
+
               ],
             ),
           ),
@@ -590,10 +624,10 @@ class _PuzzleGamePageState extends State<PuzzleGamePage> {
                 Container(
                   width: puzzleWidth,
                   height: puzzleHeight,
-                  decoration: BoxDecoration(
-                    border: Border.all(color: Colors.grey[300]!),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
+                  // decoration: BoxDecoration(
+                  //   border: Border.all(color: Colors.grey[300]!),
+                  //   borderRadius: BorderRadius.circular(8),
+                  // ),
                   child: GridView.builder(
                     physics: const NeverScrollableScrollPhysics(),
                     gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
@@ -648,12 +682,18 @@ class _PuzzleGamePageState extends State<PuzzleGamePage> {
                 : (piece == null ? Colors.grey[100] : Colors.white),
           ),
           child: piece == null
-              ? Center(
+              ? 
+              Center(
+                  // child: Icon(
+                  //   Icons.add_circle_outline,
+                  //   color: Colors.grey,
+                  //   size: pieceWidth * 0.3,
+                  // ),
                   child: Icon(
-                    Icons.add_circle_outline,
-                    color: Colors.grey,
-                    size: pieceWidth * 0.3,
-                  ),
+                    Icons.extension, 
+                    color: Colors.grey[400],
+                    size: pieceWidth * 0.4,
+                    ),
                 )
               : Draggable<PuzzlePiece>(
                   data: piece,
@@ -716,8 +756,8 @@ class _PuzzleGamePageState extends State<PuzzleGamePage> {
               maxHeight: MediaQuery.of(context).size.height * 0.6,
             ),
             child: GridView.builder(
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
+              shrinkWrap: false,
+              physics: const AlwaysScrollableScrollPhysics(),
               gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
                 crossAxisCount: 3,
                 crossAxisSpacing: 4,

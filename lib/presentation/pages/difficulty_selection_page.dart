@@ -12,7 +12,7 @@ class DifficultySelectionPage extends StatelessWidget {
       {'pieces': 12, 'cols': 4, 'rows': 3, 'label': 'INICIANTE'},
       {'pieces': 15, 'cols': 5, 'rows': 3, 'label': 'INTERMEDIÁRIO'},
       {'pieces': 24, 'cols': 6, 'rows': 4, 'label': 'DESAFIADOR'},
-      {'pieces': 30, 'cols': 6, 'rows': 5, 'label': 'EXPERT'},
+      {'pieces': 35, 'cols': 6, 'rows': 5, 'label': 'EXPERT'},
     ];
     
     final screenWidth = MediaQuery.of(context).size.width;
@@ -101,7 +101,6 @@ class DifficultySelectionPage extends StatelessWidget {
                     
                     const SizedBox(height: 40),
                     
-                    // Botões de dificuldade
                     Column(
                       children: difficultyOptions.asMap().entries.map((entry) {
                         final index = entry.key;
