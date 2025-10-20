@@ -31,6 +31,15 @@ class _PuzzleGamePageState extends State<PuzzleGamePage> {
     6: 'assets/ods/ods6.png', 
     7: 'assets/ods/ods7.png', 
     8: 'assets/ods/ods8.png',
+    9: 'assets/ods/ods9.png',
+    10: 'assets/ods/ods10.png',
+    11: 'assets/ods/ods11.png',
+    12: 'assets/ods/ods12.png',
+    13: 'assets/ods/ods13.png',
+    14: 'assets/ods/ods14.png',
+    15: 'assets/ods/ods15.png',
+    16: 'assets/ods/ods16.png',
+    17: 'assets/ods/ods17.png',
   };
 
   final Map<int, String> nomeOds = {
@@ -41,6 +50,15 @@ class _PuzzleGamePageState extends State<PuzzleGamePage> {
     6: 'Água Potável e Saneamento',
     7: 'Energia Limpa e Acessível',
     8: 'Trabalho Decente e Crescimento Econômico',
+    9: 'Indústria, inovação e infraestrutura',
+    10: 'Redução das desigualdades',
+    11: 'Cidades e comunidades sustentáveis',
+    12: 'Consumo e produção responsáveis',
+    13: 'Ação contra a mudança global do clima',
+    14: 'Vida na água',
+    15: 'Vida terrestre',
+    16: 'Paz, Justiça e Instituições Eficazes',
+    17: 'Parcerias e meios de implementação',
   };
 
   List<int> get availableODSNumbers => odsMap.keys.toList()..sort();
